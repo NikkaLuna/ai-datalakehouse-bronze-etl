@@ -1,0 +1,11 @@
+{
+  "user_id": "u002",
+  "event_type": "purchase",
+  "timestamp": "2025-06-17T20:00:00Z",
+  "device": "desktop",
+  "model_input_flag": false,
+  "feature_hash": "def456",
+  "inference_ts": "2025-06-17T20:01:00Z",
+  "ingestion_ts": "2025-06-17T20:02:00Z",
+  "source": "email"
+}
