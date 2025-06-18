@@ -246,6 +246,23 @@ WHERE event_type = 'click'
 
 * * * * *
 
+### Challenge & Resolution: Delta Lake Compatibility in AWS Glue
+
+> **"One of the most frustrating challenges I encountered was trying to use Delta Lake format in AWS Glue for my Bronze layer. Despite following the official documentation and configuring the necessary job parameters (e.g., `--additional-python-modules`, Delta extensions), I kept running into persistent path resolution errors like `IllegalArgumentException: Can not create a Path from an empty string`."**
+
+#### How I Overcame It
+
+> "After trying over a dozen variations, including Spark config changes and Glue version upgrades, I realized that full Delta Lake support wasn't production-ready in Glue without a complex setup.
+>
+> Rather than lose momentum, I pivoted to using **Parquet** --- a fully supported format --- and ensured schema evolution, catalog registration, and Athena queryability still worked end-to-end.
+>
+> This let me move forward with building the rest of the pipeline while still following best practices for analytical data formats."
+
+#### What I Learned
+
+> "I learned to **balance ideal tech with practical delivery**. I now test compatibility early and prioritize **progress over perfection** when deadlines matter --- a mindset that serves me well in real-world data engineering work."
+
+* * * * *
 
 Contact
 ----------
