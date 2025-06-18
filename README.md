@@ -150,7 +150,8 @@ and sets the foundation for scalable **feature engineering** or **ML ingestion w
 
 ### Athena Query Success: Bronze Layer Output
 
-![Athena Query Result](screenshots/athena_query_parquet_success.png)
+![Athena Query Result](screenshots/athena_query_parquet_success1.png)
+
 
 This Athena query validates that the `bronze_user_events_parquet` table is registered and queryable.  
 It filters for records marked as `model_input_flag = true` and selects AI-relevant fields such as  
@@ -162,7 +163,7 @@ in Parquet format — optimized for downstream **AI analytics** and **feature en
 
 ### Athena Query: Silver Layer (Partitioned Read)
 
-![Athena Silver Query](screenshots/athena_silver_query.png)
+![Athena Silver Query](screenshots/athena_silver_query1.png)
 
 This screenshot shows a successful Athena query against the `silver_user_events` table.  
 The query filters by partition columns `event_type` and `event_date`, demonstrating optimized access to Parquet data.
@@ -248,12 +249,13 @@ WHERE event_type = 'click'
 
 ### Challenge & Resolution: Delta Lake Compatibility in AWS Glue
 
-**One of the most frustrating challenges I encountered was trying to use Delta Lake format in AWS Glue for my Bronze layer. Despite following the official documentation and configuring the necessary job parameters (e.g., `--additional-python-modules`, Delta extensions), I kept running into persistent path resolution errors like `IllegalArgumentException: Can not create a Path from an empty string`."**
+One of the most frustrating challenges I encountered was trying to use Delta Lake format in AWS Glue for my Bronze layer. 
+
+Despite following the official documentation and configuring the necessary job parameters (e.g., `--additional-python-modules`, Delta extensions), I kept running into persistent path resolution errors like `IllegalArgumentException: Can not create a Path from an empty string`."**
 
 #### How I Overcame It
 
 After trying over a dozen variations, including Spark config changes and Glue version upgrades, I realized that full Delta Lake support wasn't production-ready in Glue without a complex setup.
-
 
 Rather than lose momentum, I pivoted to using **Parquet** --- a fully supported format --- and ensured schema evolution, catalog registration, and Athena queryability still worked end-to-end.
 
