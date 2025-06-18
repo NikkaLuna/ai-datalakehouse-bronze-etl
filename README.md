@@ -4,10 +4,12 @@ AI-Ready Bronze ETL Pipeline (AWS Glue → S3 → Parquet → Athena)
 Build an AI-ready lakehouse bronze layer pipeline using AWS Glue to transform raw JSON data into enriched Parquet files. The data is registered in AWS Glue Catalog and made queryable via Amazon Athena.
 
 ![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazon-aws)
-![Glue](https://img.shields.io/badge/Glue-Spark-blue?logo=apache-spark)
+![Glue](https://img.shields.io/badge/Glue-Spark%203.5-blue?logo=apache-spark)
+![PySpark](https://img.shields.io/badge/PySpark-ETL-lightgrey?logo=python)
+![S3](https://img.shields.io/badge/S3-Parquet-green?logo=amazon-s3)
 ![Athena](https://img.shields.io/badge/Athena-SQL-blue)
-![S3](https://img.shields.io/badge/S3-Parquet-yellow?logo=amazon-s3)
-![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
+![Data Catalog](https://img.shields.io/badge/Glue%20Catalog-Metadata-yellow)
+![Crawler](https://img.shields.io/badge/Glue%20Crawler-Schema%20Discovery-lightblue)
 
 * * * * *
 
@@ -32,18 +34,6 @@ Glue Catalog Table
      ↓
 Athena Query Layer (SQL)
 ```
-
-* * * * *
-
-Tech Stack
--------------
-
-| Layer | Technology |
-| Cloud Platform | AWS |
-| Processing Engine | AWS Glue (Spark 3.5 / PySpark) |
-| Storage Format | Parquet on S3 |
-| Query Layer | Athena (Trino SQL) |
-| Workflow/Metadata | AWS Glue Crawlers, Glue Catalog |
 
 * * * * *
 
