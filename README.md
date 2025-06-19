@@ -25,6 +25,25 @@ This project implements a **multi-stage ELT workflow**:
 
 * * * * *
 
+## 🌍 Live Project Showcase
+
+This ETL pipeline is fully published as a **static site** using modern AWS services for scalability, performance, and custom domain routing.
+
+-Hosted via Amazon S3 (Static Website Hosting)  
+-Delivered globally through CloudFront with HTTPS  
+-Routed through a custom domain using Route 53  
+-Features: visual pipeline diagrams, Glue job runs, Athena results, and S3 structure from Raw → Gold
+
+🔗 [**Launch the Website**](https://ai-lakehouse-pipeline.andreahayes-dev.com)
+
+🎥 [**View the Guided Walkthrough**](https://ai-lakehouse-pipeline.andreahayes-dev.com/video.html)
+
+This website includes a step-by-step visual breakdown of each stage in the lakehouse pipeline—from JSON ingestion in Raw, to AI-ready Gold features, including deduplication logic, partitioned outputs, and user-level aggregations.
+
+
+* * * * *
+
+
 Architecture
 ---------------
 
@@ -211,6 +230,30 @@ Layers Summary
 
 * * * * *
 
+## 🕷️ Crawler Registration & Glue Catalog Integration
+
+To make each data layer (Bronze, Silver, Gold) queryable in Athena, AWS Glue Crawlers are used to register their respective S3 locations. Crawlers automatically detect schema and update the **Glue Data Catalog**, enabling SQL-based exploration with Athena or Redshift Spectrum.
+
+### 🔄 Crawler Setup Summary
+
+| Layer   | Crawler Name                  | Target S3 Path                                                   | Table Name                      | Database           |
+|---------|-------------------------------|-------------------------------------------------------------------|----------------------------------|--------------------|
+| Bronze  | `crawler_bronze_user_events`  | `s3://ai-lakehouse-project/bronze/user_events_parquet/`          | `bronze_user_events_parquet`    | `ai_lakehouse_db`  |
+| Silver  | `crawler_silver_user_events`  | `s3://ai-lakehouse-project/silver/user_events/`                  | `silver_user_events`            | `ai_lakehouse_db`  |
+| Gold    | `crawler_gold_user_features`  | `s3://ai-lakehouse-project/gold/user_features/`                  | `gold_user_features`            | `ai_lakehouse_db`  |
+
+### ⚙️ How to Configure a Crawler
+
+1. Open **AWS Glue → Crawlers → Add Crawler**
+2. Select **S3** as the source and input the appropriate path
+3. Choose an IAM role (e.g., `AWSGlueServiceRole_ai_lakehouse`)
+4. Set the **target database** to `ai_lakehouse_db`
+5. Optionally use a **table prefix** (`bronze_`, `silver_`, `gold_`)
+6. Run the crawler to scan the data and create or update the table
+
+Once created, these crawlers keep your Athena metadata **fresh and aligned** with the outputs of your Glue jobs.
+
+* * * * *
 
 Sample Athena Query
 ----------------------
