@@ -176,7 +176,6 @@ The final AWS Glue job successfully processed the Silver data into aggregated **
 
 This job used **2 DPUs on Glue 5.0**, completed in under 2 minutes, and demonstrates schema evolution and partitioned output.
 
----
 
 ### Gold Output in S3
 
@@ -186,6 +185,7 @@ Final Gold layer output was successfully written to:
 
 s3://ai-lakehouse-project/gold/user_features/
 
+---
 
 ### Athena Query Success: Bronze Layer Output
 
@@ -236,27 +236,28 @@ Layers Summary
 
 ### 🥉 Bronze Layer
 
--   Enriches raw JSON data
-
--   Writes to: `s3://ai-lakehouse-project/bronze/user_events_parquet/`
-
--   Registered via crawler
-
--   Queryable in Athena
+-   Enriches raw JSON data  
+-   Writes to: `s3://ai-lakehouse-project/bronze/user_events_parquet/`  
+-   Registered via crawler  
+-   Queryable in Athena  
 
 ### 🥈 Silver Layer
 
--   Deduplicated on `user_id`, `event_type`, and `timestamp`
+-   Deduplicated on `user_id`, `event_type`, and `timestamp`  
+-   Filters out nulls on critical fields  
+-   Partitioned by `event_type`, `event_date`  
+-   Writes to: `s3://ai-lakehouse-project/silver/user_events/`  
+-   Registered via crawler  
+-   Validated via Athena (low-latency, partition-filtered query)  
 
--   Filters out nulls on critical fields
+### 🥇 Gold Layer
 
--   Partitioned by `event_type`, `event_date`
-
--   Writes to: `s3://ai-lakehouse-project/silver/user_events/`
-
--   Registered via crawler
-
--   Validated via Athena (low-latency, partition-filtered query)
+-   Aggregates user-level features for analytics  
+-   Output includes click/purchase counts and time-based rollups  
+-   Partitioned and optimized for fast querying  
+-   Writes to: `s3://ai-lakehouse-project/gold/user_features/`  
+-   Registered via crawler  
+-   Validated via Athena (scanned records <1KB, sub-second query)  
 
 
 * * * * *
@@ -334,25 +335,53 @@ WHERE event_type = 'click'
 - Scans minimal data (0.18 KB) in Athena with sub-second response time
 
 * * * * *
+### Challenge: Delta Lake Compatibility in AWS Glue
 
-### Challenge & Resolution: Delta Lake Compatibility in AWS Glue
+One of the most frustrating roadblocks I faced was trying to use **Delta Lake** as the storage format in AWS Glue for the Bronze layer.
 
-One of the most frustrating challenges I encountered was trying to use Delta Lake format in AWS Glue for my Bronze layer. 
+Despite following official guidance --- including setting Glue job parameters like:
 
-Despite following the official documentation and configuring the necessary job parameters (e.g., `--additional-python-modules`, Delta extensions), I kept running into persistent path resolution errors like `IllegalArgumentException: Can not create a Path from an empty string`."**
+```
+--additional-python-modules delta-spark==<version>\
+--conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension\
+--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog
+```
 
-#### How I Overcame It
+I consistently ran into cryptic path resolution errors, such as:
 
-After trying over a dozen variations, including Spark config changes and Glue version upgrades, I realized that full Delta Lake support wasn't production-ready in Glue without a complex setup.
+`IllegalArgumentException: Can not create a Path from an empty  string  `
 
-Rather than lose momentum, I pivoted to using **Parquet** --- a fully supported format --- and ensured schema evolution, catalog registration, and Athena queryability still worked end-to-end.
+### How I Resolved It
 
+After testing multiple variations --- including:
 
-This let me move forward with building the rest of the pipeline while still following best practices for analytical data formats.
+-   Upgrading Glue version (4.0 → 5.0)
 
-#### What I Learned
+-   Adjusting Spark and Delta configurations
 
-I learned to **balance ideal tech with practical delivery**. I now test compatibility early and prioritize **progress over perfection** when deadlines matter --- a mindset that serves me well in real-world data engineering work.
+-   Trying both interactive and job modes
+
+I concluded that **Delta Lake support in Glue is not fully production-ready** without extensive custom setup (e.g., bootstrap scripts, additional JARs).
+
+So instead, I made a **pragmatic pivot**:
+
+-   Switched to **Parquet**, which is natively supported in AWS Glue
+
+-   Preserved schema evolution via Glue Catalog
+
+-   Ensured **Athena queryability** remained intact
+
+* * * * *
+
+### Outcome
+
+Choosing Parquet over Delta allowed me to:
+
+-   Keep momentum on pipeline development
+
+-   Maintain a performant, partitioned data lake
+
+-   Preserve schema traceability via crawlers + Glue Catalog
 
 * * * * *
 
