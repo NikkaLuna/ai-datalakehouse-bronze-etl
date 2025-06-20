@@ -180,9 +180,11 @@ This job used **2 DPUs on Glue 5.0**, completed in under 2 minutes, and demonstr
 
 ### Gold Output in S3
 
-![S3 Gold Output](screenshots/s3_gold_output.png)  
-Data was written to:
+![S3 Gold Output](screenshots/s3_gold_output.png)
 
+Final Gold layer output was successfully written to:
+
+s3://ai-lakehouse-project/gold/user_features/
 
 
 ### Athena Query Success: Bronze Layer Output
