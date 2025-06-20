@@ -34,9 +34,9 @@ This ETL pipeline is fully published as a **static site** using modern AWS servi
 -Routed through a custom domain using Route 53  
 -Features: visual pipeline diagrams, Glue job runs, Athena results, and S3 structure from Raw → Gold
 
-🔗 [**Launch the Website**](https://ai-lakehouse-pipeline.andreahayes-dev.com)
+🔗 [**Launch the Website**](https://ai-lakehouse.com/index.html)
 
-🎥 [**View the Guided Walkthrough**](https://ai-lakehouse-pipeline.andreahayes-dev.com/video.html)
+🎥 [**View the Guided Walkthrough**](https://ai-lakehouse.com/video.html)
 
 This website includes a step-by-step visual breakdown of each stage in the lakehouse pipeline—from JSON ingestion in Raw, to AI-ready Gold features, including deduplication logic, partitioned outputs, and user-level aggregations.
 
