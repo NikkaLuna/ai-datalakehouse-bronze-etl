@@ -167,6 +167,24 @@ and sets the foundation for scalable **feature engineering** or **ML ingestion w
 
 
 
+## Gold Layer Output & Validation
+
+### Gold ETL Job Success
+
+![Gold Glue Job](screenshots/glue_gold_job_success.png)  
+The final AWS Glue job successfully processed the Silver data into aggregated **user-level features**, writing to the Gold layer in Parquet format.
+
+This job used **2 DPUs on Glue 5.0**, completed in under 2 minutes, and demonstrates schema evolution and partitioned output.
+
+---
+
+### Gold Output in S3
+
+![S3 Gold Output](screenshots/s3_gold_output.png)  
+Data was written to:
+
+
+
 ### Athena Query Success: Bronze Layer Output
 
 ![Athena Query Result](screenshots/athena_query_parquet_success1.png)
@@ -196,6 +214,17 @@ With **run time under 1 second** and **only 0.18 KB scanned**, this confirms tha
 - Queryable
 - Partitioned effectively
 - Ready for analytics and ML pipelines
+
+### Athena Query – Gold Layer
+
+![Athena Gold Query](screenshots/athena_gold_query.png)  
+This Athena query shows:
+
+- User-level aggregation from the Gold table
+- Click and purchase counts
+- Min/max timestamps per user
+
+The query succeeded with sub-second latency — demonstrating partition efficiency and production readiness.
 
 
 * * * * *
@@ -234,7 +263,20 @@ Layers Summary
 
 To make each data layer (Bronze, Silver, Gold) queryable in Athena, AWS Glue Crawlers are used to register their respective S3 locations. Crawlers automatically detect schema and update the **Glue Data Catalog**, enabling SQL-based exploration with Athena or Redshift Spectrum.
 
-### 🔄 Crawler Setup Summary
+### Crawler Dashboard Overview
+
+![Crawler Summary](screenshots/glue_crawlers_summary.png)  
+All crawlers registered and ran successfully:
+
+- `crawler_bronze_user_events`
+- `crawler_silver_user_events`
+- `crawler_gold_user_features`
+
+**Completed all 3 crawler registrations (Bronze, Silver, Gold) with table sync confirmed in AWS Glue Catalog.**
+
+
+
+### Crawler Setup Summary
 
 | Layer   | Crawler Name                  | Target S3 Path                                                   | Table Name                      | Database           |
 |---------|-------------------------------|-------------------------------------------------------------------|----------------------------------|--------------------|
@@ -242,7 +284,7 @@ To make each data layer (Bronze, Silver, Gold) queryable in Athena, AWS Glue Cra
 | Silver  | `crawler_silver_user_events`  | `s3://ai-lakehouse-project/silver/user_events/`                  | `silver_user_events`            | `ai_lakehouse_db`  |
 | Gold    | `crawler_gold_user_features`  | `s3://ai-lakehouse-project/gold/user_features/`                  | `gold_user_features`            | `ai_lakehouse_db`  |
 
-### ⚙️ How to Configure a Crawler
+### How to Configure a Crawler
 
 1. Open **AWS Glue → Crawlers → Add Crawler**
 2. Select **S3** as the source and input the appropriate path
@@ -252,6 +294,7 @@ To make each data layer (Bronze, Silver, Gold) queryable in Athena, AWS Glue Cra
 6. Run the crawler to scan the data and create or update the table
 
 Once created, these crawlers keep your Athena metadata **fresh and aligned** with the outputs of your Glue jobs.
+
 
 * * * * *
 
