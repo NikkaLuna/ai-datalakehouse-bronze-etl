@@ -23,6 +23,10 @@ This project implements a **multi-stage ELT workflow**:
 - Register metadata in AWS Glue Catalog via crawler
 - Query both layers using **Amazon Athena** (Trino SQL engine)
 
+### Architecture Diagram
+
+![AI Lakehouse ETL Pipeline](diagram.png)
+
 * * * * *
 
 ## 🌍 Live Project Showcase
