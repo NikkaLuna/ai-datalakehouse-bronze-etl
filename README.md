@@ -25,7 +25,7 @@ This project implements a **multi-stage ELT workflow**:
 
 ### Architecture Diagram
 
-![AI Lakehouse ETL Pipeline](diagram.png)
+![AI Lakehouse ETL Pipeline](screenshots/diagram.png)
 
 * * * * *
 
