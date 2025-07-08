@@ -1,4 +1,4 @@
-AI-Ready Bronze ETL Pipeline (AWS Glue → S3 → Parquet → Athena)
+AI-Ready Bronze ETL Pipeline with Incremental + CDC Support (Glue → S3 → Parquet → Athena)
 ==================================================================
 
 Build an AI-ready lakehouse bronze layer pipeline using AWS Glue to transform raw JSON data into enriched Parquet files. The data is registered in AWS Glue Catalog and made queryable via Amazon Athena.
@@ -118,7 +118,17 @@ Screenshots
 
 ![Glue Job Success Screenshot](screenshots/glue_job_success.png)
 
-This screenshot shows the successful execution of the `bronze_job_parquet` ETL job, which ingests and enriches raw JSON from S3 and writes AI-ready data to the bronze layer in Parquet format.  
+This screenshot shows the successful execution of the bronze-etl-incremental Glue job, which loads only new raw events from S3 using event_timestamp as a watermark, enriches them with metadata and hashes, and appends them to the Bronze layer in compressed Parquet format.
+
+The pipeline includes:
+
+- Incremental load filtering
+
+- AI metadata enrichment (model_input_flag, feature_hash, inference_ts)
+
+- Efficient append strategy (no overwrite)
+
+Resulting files are queryable from Athena and partitioned for downstream performance. 
 
 It confirms the job ran with **2 DPUs** on **AWS Glue 5.0** and completed in **under 2 minutes**.
 
@@ -136,7 +146,11 @@ This table references the Parquet files written by the AWS Glue job and is now *
 ![S3 Bronze Output](screenshots/s3_bronze_parquet_output.png)
 
 This screenshot shows enriched event data successfully written by the Glue ETL job to the  
-`s3://ai-lakehouse-project/bronze/user_events_parquet/` S3 folder in partitioned **Parquet format**.  
+`s3://ai-lakehouse-project/bronze/user_events_parquet/` S3 folder in partitioned **Parquet format**. 
+
+Output from the incremental Bronze ETL job. Each file represents new enriched JSON converted to Parquet.
+
+The naming format (part-00000...snappy.parquet) confirms Spark-optimized compression.
 
 Timestamps confirm the files are fresh and reflect schema-enriched, AI-ready ingestion,  
 suitable for downstream querying via **Athena** or **Redshift Spectrum**.
@@ -154,13 +168,12 @@ The job ran on **2 DPUs using AWS Glue 5.0**, completed in under 2 minutes, and 
 This Silver ETL layer prepares data for **fast, partition-aware Athena queries**,  
 as well as **AI model training pipelines** and downstream **feature engineering workflows**.
 
-
 ### Silver Layer Output (Partitioned Parquet Format)
 
 ![S3 Silver Output](screenshots/s3_silver_output.png)
 
 This screenshot shows validated and deduplicated Silver-layer data written to  
-`s3://ai-lakehouse-project/silver/user_events/` by the `silver_job_parquet.py` Glue job.  
+`s3://ai-lakehouse-project/silver/user_events/` by the `silver_etl_cdc` Glue job.  
 
 The output is organized using a **two-level partitioning scheme**:  
 - `event_type` (e.g., `click`, `purchase`)  
@@ -175,19 +188,33 @@ and sets the foundation for scalable **feature engineering** or **ML ingestion w
 
 ### Gold ETL Job Success
 
-![Gold Glue Job](screenshots/glue_gold_job_success.png)  
-The final AWS Glue job successfully processed the Silver data into aggregated **user-level features**, writing to the Gold layer in Parquet format.
+![Glue Gold Job](screenshots/glue_gold_job_success.png)
 
-This job used **2 DPUs on Glue 5.0**, completed in under 2 minutes, and demonstrates schema evolution and partitioned output.
+This screenshot shows the successful execution of the `gold_etl_features` AWS Glue job.
+
+This final ETL step aggregates deduplicated Silver-layer data into **user-level AI features**, including:
+- `click_count`, `purchase_count`
+- `last_event_timestamp`, `last_event_type`
+- `days_since_last_event`
+
+Job ran using **2 DPUs**, completed in **~1 minute**, and wrote to:
+
+`s3://ai-lakehouse-project/gold/user_features/`
+
+Output is **partitioned by training_date** and is queryable from **Amazon Athena** for fast, ML-ready exploration.
 
 
 ### Gold Output in S3
 
 ![S3 Gold Output](screenshots/s3_gold_output.png)
 
-Final Gold layer output was successfully written to:
+This screenshot confirms the partitioned Gold-layer output in S3,  
+showing feature-enriched user records written in **Parquet format**, partitioned by `training_date`.
 
-s3://ai-lakehouse-project/gold/user_features/
+These features are optimized for downstream:
+- ML training pipelines
+- SageMaker ingestion
+- Athena-based analytics
 
 ---
 
@@ -245,6 +272,17 @@ Layers Summary
 -   Registered via crawler  
 -   Queryable in Athena  
 
+### Bronze Layer Upgrade Summary
+
+The new `bronze_job_parquet.py` job includes:
+- Incremental data filtering using `event_timestamp` watermark
+- Metadata enrichment for AI/ML compatibility
+- SHA2 hashing of events for unique identification
+- Efficient append-only write mode (no reprocessing)
+- Parquet output suitable for Athena + ML pipelines
+
+---
+
 ### 🥈 Silver Layer
 
 -   Deduplicated on `user_id`, `event_type`, and `timestamp`  
@@ -254,6 +292,17 @@ Layers Summary
 -   Registered via crawler  
 -   Validated via Athena (low-latency, partition-filtered query)  
 
+### ✅ Silver Layer Upgrade Summary
+
+The `silver_job_parquet.py` job includes:
+- Deduplication via `user_id + event_timestamp` (using window function)
+- Null filtering on critical fields (`user_id`, `event_type`)
+- Event timestamp normalization and date extraction
+- Partition overwrite behavior to simulate CDC (MERGE)
+- Optimized Parquet output for analytics and ML
+
+---
+
 ### 🥇 Gold Layer
 
 -   Aggregates user-level features for analytics  
@@ -262,6 +311,15 @@ Layers Summary
 -   Writes to: `s3://ai-lakehouse-project/gold/user_features/`  
 -   Registered via crawler  
 -   Validated via Athena (scanned records <1KB, sub-second query)  
+
+### ✅ Gold Layer Upgrade Summary
+
+The `gold_user_features.py` job includes:
+- Aggregation of click and purchase counts
+- Extraction of most recent event type and timestamp
+- Calculation of `days_since_last_event`
+- Addition of `training_date` column for reproducible ML snapshots
+- Partitioned Parquet output with Glue Catalog registration
 
 
 * * * * *
