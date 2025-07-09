@@ -377,7 +377,9 @@ An interactive dashboard was built using **Amazon QuickSight** on top of the `go
    - Shows how many events of each type are associated with each user
    - Ideal for behavior segmentation or funnel analysis
 
-   ![click vs purchase bar](screenshots/quicksight_click_purchase_bar.png)
+   <img src="screenshots/quicksight_click_purchase_bar.png" alt="Click vs Purchase Bar Chart" width="50%"/>
+
+
 
 2. **Last Event Snapshot**
    - Chart: Table
@@ -393,7 +395,6 @@ An interactive dashboard was built using **Amazon QuickSight** on top of the `go
 
    ![days since last event](screenshots/quicksight_recency_histogram.png)
 
----
 
 ### 📈 Dashboard Value
 
