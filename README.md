@@ -88,14 +88,19 @@ Technologies Used
 --------------------
 
 ```
+Project Structure
 ├── glue_jobs/
 │   ├── bronze_job_parquet.py
-│   └── silver_job_parquet.py
+│   ├── silver_job_parquet.py
+│   ├── dq_checks.py
+│   └── gold_user_features.py
 ├── queries/
 │   └── athena_sample_query.sql
 ├── sample_data/
 │   ├── event.json
 │   └── event_2.json
+├── reports/
+│   └── dq_report.json
 ├── screenshots/
 │   ├── glue_bronze_job_success.png
 │   ├── glue_silver_job_success.png
@@ -104,8 +109,13 @@ Technologies Used
 │   ├── s3_bronze_output.png
 │   ├── s3_silver_output.png
 │   ├── athena_bronze_query.png
-│   └── athena_silver_query.png
+│   ├── athena_silver_query.png
+│   ├── glue_gold_job_success.png
+│   ├── s3_gold_output.png
+│   ├── athena_gold_query.png
+│   └── dq_report_preview.png          
 └── README.md
+
 
 ```
 
@@ -292,7 +302,7 @@ The new `bronze_job_parquet.py` job includes:
 -   Registered via crawler  
 -   Validated via Athena (low-latency, partition-filtered query)  
 
-### ✅ Silver Layer Upgrade Summary
+### Silver Layer Upgrade Summary
 
 The `silver_job_parquet.py` job includes:
 - Deduplication via `user_id + event_timestamp` (using window function)
@@ -312,7 +322,7 @@ The `silver_job_parquet.py` job includes:
 -   Registered via crawler  
 -   Validated via Athena (scanned records <1KB, sub-second query)  
 
-### ✅ Gold Layer Upgrade Summary
+### Gold Layer Upgrade Summary
 
 The `gold_user_features.py` job includes:
 - Aggregation of click and purchase counts
@@ -323,6 +333,38 @@ The `gold_user_features.py` job includes:
 
 
 * * * * *
+
+## Data Quality Layer
+
+A new job `dq_checks_silver_layer` was added to validate Silver-layer integrity and readiness for downstream ML and analytics.
+
+### Job Highlights
+- Run on **AWS Glue 5.0** using PySpark (**2 DPUs**, G.1X)
+- Scanned all records from:  
+  `s3://ai-lakehouse-project/silver/user_events/`
+- Executed in: **1 min 51 sec**
+- Validated key columns for:
+  - Null values
+  - Duplicate detection (`user_id + event_timestamp`)
+  - Cardinality / uniqueness
+
+### Outputs
+- Summary report (JSON): `s3://ai-lakehouse-project/reports/dq_report.json`
+- Markdown version: [reports/dq_report.md](reports/dq_report.md)
+
+  * * * * *
+
+### Findings
+- ✅ 0 nulls in `user_id`, `event_type`, `feature_hash`
+- ✅ 0 duplicates
+- ✅ 100% schema match with expected structure
+
+### Glue Job Screenshot
+
+![DQ Glue Job Success](screenshots/glue_dq_job_success.png)
+
+
+
 
 ## 🕷️ Crawler Registration & Glue Catalog Integration
 

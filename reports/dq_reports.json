@@ -1,0 +1,1 @@
+{"distinct_users":2,"duplicate_records":0,"null_checks":{"event_type":{"null_percent":null,"null_count":0},"event_timestamp":{"null_percent":null,"null_count":0},"user_id":{"null_percent":null,"null_count":0}},"passed":true,"timestamp":"2025-07-09T16:11:40.336811","total_rows":2}
