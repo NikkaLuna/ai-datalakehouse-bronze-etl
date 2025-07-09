@@ -352,18 +352,56 @@ A new job `dq_checks_silver_layer` was added to validate Silver-layer integrity 
 - Summary report (JSON): `s3://ai-lakehouse-project/reports/dq_report.json`
 - Markdown version: [reports/dq_report.md](reports/dq_report.md)
 
-  * * * * *
+  ---
 
 ### Findings
-- ✅ 0 nulls in `user_id`, `event_type`, `feature_hash`
-- ✅ 0 duplicates
-- ✅ 100% schema match with expected structure
+-  0 nulls in `user_id`, `event_type`, `feature_hash`
+-  0 duplicates
+-  100% schema match with expected structure
 
 ### Glue Job Screenshot
 
 ![DQ Glue Job Success](screenshots/glue_dq_job_success.png)
 
 
+* * * * *
+
+## 📊 QuickSight Dashboard (Gold Layer)
+
+An interactive dashboard was built using **Amazon QuickSight** on top of the `gold_user_features` table queried via **Athena**. This showcases the business value of the enriched data model and highlights user behavior patterns.
+
+### Dashboard Highlights
+
+1. **Click vs Purchase Count by User**
+   - Chart: Clustered bar chart
+   - Shows how many events of each type are associated with each user
+   - Ideal for behavior segmentation or funnel analysis
+
+   ![click vs purchase bar](screenshots/quicksight_click_purchase_bar.png)
+
+2. **Last Event Snapshot**
+   - Chart: Table
+   - Shows each user's most recent event type and timestamp
+   - Useful for recency modeling or engagement freshness
+
+   ![last event table](screenshots/quicksight_last_event_table.png)
+
+3. **User Recency Distribution**
+   - Chart: Histogram
+   - Metric: `days_since_last_event` (calculated in Glue)
+   - Shows how recently users interacted with the system
+
+   ![days since last event](screenshots/quicksight_recency_histogram.png)
+
+---
+
+### 📈 Dashboard Value
+
+- Enables **business-friendly exploration** of data without needing SQL or code
+- Demonstrates how AI/ML features (like click_count, recency) can support personalization
+- Adds final polish — turning your project into a **production-ready, end-to-end pipeline**
+
+* * * * *
 
 
 ## 🕷️ Crawler Registration & Glue Catalog Integration
