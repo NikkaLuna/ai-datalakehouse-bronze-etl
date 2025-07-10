@@ -69,6 +69,19 @@ Athena Query Layer (Trino SQL)
 
 * * * * *
 
+### ⚙️ Orchestration with AWS Glue Workflow
+
+The ETL pipeline is fully automated using AWS Glue Workflows.  
+Jobs are triggered in sequence: Bronze → Silver → Gold, with dependencies and trigger logic.
+
+This visual confirms the execution of the full medallion pipeline:
+
+![ETL Workflow Completed](screenshots/etl_orchestration_glue_workflow_medallion_layers.png)
+
+> Workflow status: Completed – All stages ran successfully end-to-end.
+
+* * * * *
+
 Technologies Used
 --------------------
 
@@ -120,6 +133,8 @@ Project Structure
 ```
 
 * * * * *
+
+
 
 Screenshots
 ---------------
@@ -331,6 +346,14 @@ The `gold_user_features.py` job includes:
 - Addition of `training_date` column for reproducible ML snapshots
 - Partitioned Parquet output with Glue Catalog registration
 
+### Querying the Gold Layer in Athena
+
+This Athena query demonstrates the AI-ready output of the ETL pipeline.  
+You can see user-level features such as click/purchase counts, timestamps, and feature hashes — all produced by the `gold_etl_features` Glue job.
+
+![Gold Layer Query in Athena](assets/screenshots/athena_gold_medallion_workflow_query.png)
+
+> ⚡ Fast and cost-effective — only 0.32KB scanned in under 500ms.
 
 * * * * *
 
@@ -377,7 +400,8 @@ An interactive dashboard was built using **Amazon QuickSight** on top of the `go
    - Shows how many events of each type are associated with each user
    - Ideal for behavior segmentation or funnel analysis
 
-   <img src="screenshots/quicksight_click_purchase_bar.png" alt="Click vs Purchase Bar Chart" width="50%"/>
+
+   <img src="screenshots/quicksight_click_purchase_bar.png" alt="Click vs Purchase Bar Chart" width="70%"/>
 
 
 
