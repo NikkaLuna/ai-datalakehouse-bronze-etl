@@ -351,7 +351,7 @@ The `gold_user_features.py` job includes:
 This Athena query demonstrates the AI-ready output of the ETL pipeline.  
 You can see user-level features such as click/purchase counts, timestamps, and feature hashes — all produced by the `gold_etl_features` Glue job.
 
-![Gold Layer Query in Athena](assets/screenshots/athena_gold_medallion_workflow_query.png)
+![Gold Layer Query in Athena](screenshots/athena_gold_medallion_workflow_query.png)
 
 > ⚡ Fast and cost-effective — only 0.32KB scanned in under 500ms.
 
