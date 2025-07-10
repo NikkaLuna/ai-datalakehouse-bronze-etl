@@ -1,7 +1,11 @@
 AI-Ready Bronze ETL Pipeline with Incremental + CDC Support (Glue → S3 → Parquet → Athena)
 ==================================================================
 
-Build an AI-ready lakehouse bronze layer pipeline using AWS Glue to transform raw JSON data into enriched Parquet files. The data is registered in AWS Glue Catalog and made queryable via Amazon Athena.
+This project simulates a real-world AI pipeline: ingesting raw clickstream events, transforming them through scalable ETL stages, and producing user-level features ready for machine learning and analytics.
+
+- End-to-end Medallion architecture with AWS Glue, S3, and Athena  
+- ML-ready user features stored in partitioned Parquet format  
+- Fully automated orchestration, data quality checks, and QuickSight dashboards
 
 ![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazon-aws)
 ![Glue](https://img.shields.io/badge/Glue-Spark%203.5-blue?logo=apache-spark)
@@ -14,6 +18,7 @@ Build an AI-ready lakehouse bronze layer pipeline using AWS Glue to transform ra
 
 Overview
 -----------
+
 
 This project implements a **multi-stage ELT workflow**:
 
