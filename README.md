@@ -511,7 +511,7 @@ WHERE event_type = 'click'
 
 One of the most frustrating roadblocks I faced was trying to use **Delta Lake** as the storage format in AWS Glue for the Bronze layer.
 
-Despite following official guidance --- including setting Glue job parameters like:
+Despite following official guidance - including setting Glue job parameters like:
 
 ```
 --additional-python-modules delta-spark==<version>\
@@ -525,7 +525,7 @@ I consistently ran into cryptic path resolution errors, such as:
 
 ### How I Resolved It
 
-After testing multiple variations --- including:
+After testing multiple variations - including:
 
 -   Upgrading Glue version (4.0 → 5.0)
 
