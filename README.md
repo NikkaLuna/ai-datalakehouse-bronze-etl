@@ -305,11 +305,53 @@ Layers Summary
 ### Bronze Layer Upgrade Summary
 
 The new `bronze_job_parquet.py` job includes:
-- Incremental data filtering using `event_timestamp` watermark
+- Incremental data filtering using `updated_at` watermark (CDC-aware ordering)
 - Metadata enrichment for AI/ML compatibility
 - SHA2 hashing of events for unique identification
 - Efficient append-only write mode (no reprocessing)
 - Parquet output suitable for Athena + ML pipelines
+
+### CDC Data Contract (Bronze)
+
+Bronze follows a simple CDC-style shape so we can run incrementally, rerun safely, and let downstream layers do “merge-like” behavior using Parquet + partition overwrite.
+
+### CDC columns added in Bronze
+
+| Column        | Type      | What it’s for |
+|--------------|-----------|---------------|
+| `pk`         | string    | Stable primary key for the record (deterministic across reruns / late arrivals). |
+| `op`         | string    | Change type: `I` (insert), `U` (update), `D` (delete / tombstone). |
+| `updated_at` | timestamp | When the source says the record was last updated (used for “latest wins”). |
+| `run_id`     | string    | Identifier for the Glue run that produced the row (audit + debugging). |
+
+### How `pk` is generated
+
+Clickstream events don’t come with a guaranteed event_id, so this project derives one:
+
+`pk = sha2(concat_ws('||', user_id, event_type, event_timestamp, <optional stable fields>), 256)`
+
+The key point is that `pk` is **deterministic**: the same event produces the same key every time.  
+If your source already provides a real `event_id`, use that instead.
+
+### `op` values (CDC semantics)
+
+We use the usual CDC operation codes:
+
+- `I` — new record
+- `U` — updated record for the same `pk`
+- `D` — delete / tombstone for the same `pk` (downstream treats it as removed)
+
+If `op` isn’t present in raw input, Bronze defaults to `I`.
+
+### How `updated_at` is chosen
+
+Ordering matters for CDC, so Bronze always populates `updated_at`:
+
+1. use raw `updated_at` if provided  
+2. else fall back to `event_timestamp` (parsed from `timestamp`)  
+3. else fall back to `ingestion_ts`
+
+Downstream layers use `updated_at` for “latest-wins” resolution.
 
 ---
 
@@ -511,7 +553,7 @@ WHERE event_type = 'click'
 
 One of the most frustrating roadblocks I faced was trying to use **Delta Lake** as the storage format in AWS Glue for the Bronze layer.
 
-Despite following official guidance - including setting Glue job parameters like:
+Despite following official guidance --- including setting Glue job parameters like:
 
 ```
 --additional-python-modules delta-spark==<version>\
@@ -525,7 +567,7 @@ I consistently ran into cryptic path resolution errors, such as:
 
 ### How I Resolved It
 
-After testing multiple variations - including:
+After testing multiple variations --- including:
 
 -   Upgrading Glue version (4.0 → 5.0)
 
