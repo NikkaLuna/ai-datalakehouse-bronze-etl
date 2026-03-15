@@ -41,6 +41,15 @@ spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 silver_df = spark.read.format("parquet").load(silver_path)
 rows_in = silver_df.count()
 
+max_event_timestamp = silver_df.select(
+    spark_max(col("event_timestamp")).alias("max_ts")
+).collect()[0]["max_ts"]
+
+freshness_days = (
+    (datetime.utcnow().date() - max_event_timestamp.date()).days
+    if max_event_timestamp else None
+)
+
 # Silver should already be "current-state" (latest-wins per pk, deletes removed),
 # but keep a defensive filter in case older files linger.
 if "op" in silver_df.columns:
@@ -72,12 +81,12 @@ counts_df = (
     )
 )
 
-# --- 3) Join + compute recency ---
+# --- 3) Join + compute recency + freshness ---
 gold_df = (
     counts_df
     .join(last_event_df, on="user_id", how="left")
     .withColumn("days_since_last_event", datediff(current_date(), to_date(col("last_event_timestamp"))))
-    .drop("max_event_timestamp")
+    .withColumn("data_freshness_days", datediff(current_date(), to_date(col("max_event_timestamp"))))
 )
 
 # Snapshot date for reproducible runs
@@ -104,6 +113,8 @@ audit_data = [
         "job_name": "gold_user_features",
         "rows_in": rows_in,
         "rows_out": rows_out,
+        "max_event_timestamp": str(max_event_timestamp),
+        "freshness_days": freshness_days,
         "run_timestamp": datetime.utcnow().isoformat(),
         "status": "SUCCESS"
     }

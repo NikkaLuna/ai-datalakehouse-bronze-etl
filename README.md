@@ -250,6 +250,19 @@ Each run captures:
 
 This provides a simple execution trail for validating Gold-layer runs and monitoring output volume over time.
 
+### Data Freshness Monitoring
+
+The Gold pipeline also records a simple data freshness signal during each run.
+
+The job calculates the most recent `event_timestamp` observed in the Silver layer and records it in the audit log along with a derived freshness metric.
+
+Audit fields added:
+
+- `max_event_timestamp`
+- `freshness_days`
+
+This makes it easy to detect situations where upstream data ingestion may have stalled or delayed events are arriving later than expected.
+
 ### Audit Output Example
 
 ![Gold Audit Runs](screenshots/s3_gold_audit_runs.png)
@@ -378,7 +391,7 @@ Downstream layers use `updated_at` for “latest-wins” resolution.
 
 ### 🥈 Silver Layer
 
--   Deduplicated on `user_id`, `event_type`, and `timestamp`  
+-   Resolves multiple versions of the same record using `pk` and `updated_at`
 -   Filters out nulls on critical fields  
 -   Partitioned by `event_type`, `event_date`  
 -   Writes to: `s3://ai-lakehouse-project/silver/user_events/`  
@@ -388,22 +401,40 @@ Downstream layers use `updated_at` for “latest-wins” resolution.
 ### Silver Layer Upgrade Summary
 
 The `silver_job_parquet.py` job includes:
-- Deduplication via `user_id + event_timestamp` (using window function)
+- CDC resolution using primary key (`pk`) and `updated_at`
+- Latest-wins logic implemented with a window function
+- Delete handling (`op = 'D'`) to remove inactive records from the active Silver dataset
 - Null filtering on critical fields (`user_id`, `event_type`)
 - Event timestamp normalization and date extraction
-- Partition overwrite behavior to simulate CDC (MERGE)
+- Partition overwrite behavior to simulate CDC-style merge behavior
 - Optimized Parquet output for analytics and ML
+
+### Handling Late Arriving Events
+
+Clickstream data often arrives out of order.
+
+This pipeline handles late-arriving updates using the `updated_at` timestamp introduced in the Bronze CDC contract.
+
+In the Silver layer, multiple versions of the same record are resolved using a window function:
+
+- records are grouped by primary key (`pk`)
+- ordered by `updated_at` descending
+- the most recent version (`row_number = 1`) is kept
+
+This means that if a late update arrives for an existing record, it can still replace the previous version during the next pipeline run.
+
+In practice, this allows the pipeline to process out-of-order events while maintaining the correct current state in the Silver layer.
 
 ---
 
 ### 🥇 Gold Layer
 
--   Aggregates user-level features for analytics  
--   Output includes click/purchase counts and time-based rollups  
--   Partitioned and optimized for fast querying  
--   Writes to: `s3://ai-lakehouse-project/gold/user_features/`  
--   Registered via crawler  
--   Validated via Athena (scanned records <1KB, sub-second query)  
+- Aggregates user-level features for analytics  
+- Output includes click/purchase counts and time-based rollups  
+- Partitioned and optimized for fast querying  
+- Writes to: `s3://ai-lakehouse-project/gold/user_features/`  
+- Registered via crawler  
+- Validated via Athena (scanned records <1KB, sub-second query)
 
 ### Gold Layer Upgrade Summary
 
