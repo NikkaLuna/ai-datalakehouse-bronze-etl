@@ -233,6 +233,22 @@ Job ran using **2 DPUs**, completed in **~1 minute**, and wrote to:
 
 Output is **partitioned by training_date** and is queryable from **Amazon Athena** for fast, ML-ready exploration.
 
+### Gold Audit Logging
+
+The Gold ETL job now also writes a lightweight audit record to:
+
+`s3://ai-lakehouse-project/audit/gold_runs/`
+
+Each run captures:
+
+- `run_id`
+- `job_name`
+- `rows_in`
+- `rows_out`
+- `run_timestamp`
+- `status`
+
+This provides a simple execution trail for validating Gold-layer runs and monitoring output volume over time.
 
 ### Gold Output in S3
 

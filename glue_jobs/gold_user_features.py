@@ -1,4 +1,6 @@
 import sys
+from datetime import datetime
+
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
@@ -25,15 +27,19 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args["JOB_NAME"], args)
 
+run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
 # Paths
 silver_path = "s3://ai-lakehouse-project/silver/user_events/"
 gold_path = "s3://ai-lakehouse-project/gold/user_features/"
+audit_path = "s3://ai-lakehouse-project/audit/gold_runs/"
 
 # Make overwrites partition-safe (only overwrites partitions present in the write DF)
 spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
 # Load Silver
 silver_df = spark.read.format("parquet").load(silver_path)
+rows_in = silver_df.count()
 
 # Silver should already be "current-state" (latest-wins per pk, deletes removed),
 # but keep a defensive filter in case older files linger.
@@ -76,6 +82,7 @@ gold_df = (
 
 # Snapshot date for reproducible runs
 gold_df = gold_df.withColumn("training_date", current_date())
+rows_out = gold_df.count()
 
 # --- 4) Write Gold partitioned by training_date ---
 # Rerunning same day replaces that day's partition only.
@@ -89,5 +96,20 @@ gold_df = gold_df.withColumn("training_date", current_date())
 
 # Keep DB creation (harmless), but avoid auto table creation to prevent schema/partition issues.
 spark.sql("CREATE DATABASE IF NOT EXISTS ai_lakehouse_db")
+
+# --- 5) Write audit record ---
+audit_data = [
+    {
+        "run_id": run_id,
+        "job_name": "gold_user_features",
+        "rows_in": rows_in,
+        "rows_out": rows_out,
+        "run_timestamp": datetime.utcnow().isoformat(),
+        "status": "SUCCESS"
+    }
+]
+
+audit_df = spark.createDataFrame(audit_data)
+audit_df.write.mode("append").json(audit_path)
 
 job.commit()
