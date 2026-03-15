@@ -250,6 +250,12 @@ Each run captures:
 
 This provides a simple execution trail for validating Gold-layer runs and monitoring output volume over time.
 
+### Audit Output Example
+
+![Gold Audit Runs](screenshots/s3_gold_audit_runs.png)
+
+Each Gold pipeline run writes a small JSON record with run metadata and row counts, providing a lightweight execution log for monitoring pipeline health.
+
 ### Gold Output in S3
 
 ![S3 Gold Output](screenshots/s3_gold_output.png)
@@ -347,7 +353,6 @@ Clickstream events don’t come with a guaranteed event_id, so this project deri
 `pk = sha2(concat_ws('||', user_id, event_type, event_timestamp, <optional stable fields>), 256)`
 
 The key point is that `pk` is **deterministic**: the same event produces the same key every time.  
-If your source already provides a real `event_id`, use that instead.
 
 ### `op` values (CDC semantics)
 
