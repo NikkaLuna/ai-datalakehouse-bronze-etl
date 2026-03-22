@@ -445,6 +445,29 @@ The `gold_user_features.py` job includes:
 - Addition of `training_date` column for reproducible ML snapshots
 - Partitioned Parquet output with Glue Catalog registration
 
+### Scaling the Pipeline
+
+This pipeline is designed to scale with increasing data volume using partitioned storage, incremental processing, and distributed Spark execution.
+
+Key design choices:
+
+- **Partitioned Parquet storage**  
+  Data is partitioned by `event_date` (Bronze/Silver) and `training_date` (Gold), enabling efficient reads and reducing query scan size in Athena.
+
+- **Incremental processing**  
+  Bronze ingestion uses `updated_at` as a watermark, allowing the pipeline to process only new or updated records instead of full reloads.
+
+- **Latest-wins CDC resolution**  
+  Silver resolves multiple versions of the same record using `pk` and `updated_at`, avoiding expensive full-table merges.
+
+- **Partition overwrite strategy**  
+  The pipeline rewrites only affected partitions instead of entire datasets, keeping writes efficient at scale.
+
+- **Columnar storage (Parquet)**  
+  Using Parquet reduces storage size and improves query performance through column pruning and compression.
+
+These patterns allow the pipeline to handle growing data volumes while maintaining performance and cost efficiency.
+
 ### Querying the Gold Layer in Athena
 
 This Athena query demonstrates the AI-ready output of the ETL pipeline.  
