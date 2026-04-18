@@ -1,11 +1,17 @@
-AI-Ready Bronze ETL Pipeline with Incremental + CDC Support (Glue → S3 → Parquet → Athena)
-==================================================================
 
-This project simulates a real-world AI pipeline: ingesting raw clickstream events, transforming them through scalable ETL stages, and producing user-level features ready for machine learning and analytics.
+AI-Ready Bronze ETL Pipeline with Incremental + CDC Support
+===========================================================
 
-- End-to-end Medallion architecture with AWS Glue, S3, and Athena  
-- ML-ready user features stored in partitioned Parquet format  
-- Fully automated orchestration, data quality checks, and QuickSight dashboards
+**Glue → S3 → Parquet → Athena**
+
+This project implements an **AWS Glue-based medallion ETL pipeline** that processes clickstream JSON into **AI-ready Parquet datasets** with:
+
+-   **incremental Bronze ingestion**
+-   a **CDC-style data contract** (`pk`, `op`, `updated_at`)
+-   **latest-wins resolution** with delete handling in Silver
+-   **Gold user-feature generation** for analytics and ML
+-   **data quality checks, audit logging, and freshness monitoring**
+-   **Athena + QuickSight consumption** for downstream exploration
 
 ![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazon-aws)
 ![Glue](https://img.shields.io/badge/Glue-Spark%203.5-blue?logo=apache-spark)
@@ -14,19 +20,23 @@ This project simulates a real-world AI pipeline: ingesting raw clickstream event
 ![Athena](https://img.shields.io/badge/Athena-SQL-blue)
 ![Data Catalog](https://img.shields.io/badge/Glue%20Catalog-Metadata-yellow)
 
+It is designed to demonstrate production-minded data engineering patterns using **AWS Glue, S3, Athena, and PySpark**.
+
+
+Live Project
+------------
+
+This project is also published as a static site with diagrams, screenshots, and a walkthrough:
+
+-   [Launch the Website](https://ai-lakehouse.com/index.html)
+-   [View the Guided Walkthrough](https://ai-lakehouse.com/video.html)
+
 * * * * *
 
-Overview
------------
+Architecture
+------------
 
-
-This project implements a **multi-stage ELT workflow**:
-
-- Ingest raw JSON event data from S3
-- Enrich and normalize with AWS Glue (Spark 3.5, PySpark)
-- Write partitioned Parquet datasets to **Bronze** and **Silver** S3 layers
-- Register metadata in AWS Glue Catalog via crawler
-- Query both layers using **Amazon Athena** (Trino SQL engine)
+Raw clickstream events are ingested incrementally, resolved into a current-state Silver dataset, and aggregated into Gold user features for analytics and ML.
 
 ### Architecture Diagram
 
@@ -34,647 +44,257 @@ This project implements a **multi-stage ELT workflow**:
 
 * * * * *
 
-## 🌍 Live Project Showcase
+Key Engineering Highlights
+------------------------------
 
-This ETL pipeline is fully published as a **static site** using modern AWS services for scalability, performance, and custom domain routing.
+This project demonstrates the ability to:
 
--Hosted via Amazon S3 (Static Website Hosting)  
--Delivered globally through CloudFront with HTTPS  
--Routed through a custom domain using Route 53  
--Features: visual pipeline diagrams, Glue job runs, Athena results, and S3 structure from Raw → Gold
-
-🔗 [**Launch the Website**](https://ai-lakehouse.com/index.html)
-
-🎥 [**View the Guided Walkthrough**](https://ai-lakehouse.com/video.html)
-
-This website includes a step-by-step visual breakdown of each stage in the lakehouse pipeline—from JSON ingestion in Raw, to AI-ready Gold features, including deduplication logic, partitioned outputs, and user-level aggregations.
-
+-   design a **medallion ETL architecture** on AWS
+-   implement **incremental and CDC-style processing**
+-   handle **late-arriving updates and deletes**
+-   produce **partitioned Parquet outputs** for low-cost querying
+-   build **audit, quality, and freshness checks**
+-   expose outputs for both **Athena analytics** and **QuickSight dashboards**
+-   make pragmatic engineering tradeoffs when platform constraints appear
 
 * * * * *
 
 
-Architecture
----------------
+Core Stack
+----------
 
-```
-Raw JSON (S3)
-     ↓
-Bronze Glue Job (PySpark)
-     ↓
-Bronze Layer (Parquet in S3)
-     ↓
-Silver Glue Job (PySpark: Clean, Dedup, Normalize)
-     ↓
-Silver Layer (Partitioned Parquet in S3)
-     ↓
-Glue Catalog Tables (bronze + silver)
-     ↓
-Athena Query Layer (Trino SQL)
-```
+| Area | Technology |
+| --- | --- |
+| Cloud | AWS |
+| Processing | AWS Glue 5.0, PySpark, Spark 3.5 |
+| Storage | Amazon S3, Parquet |
+| Metadata | AWS Glue Crawlers, Glue Catalog |
+| Query | Amazon Athena |
+| BI | Amazon QuickSight |
 
 * * * * *
 
-### ⚙️ Orchestration with AWS Glue Workflow
+Workflow Orchestration
+----------------------
 
-The ETL pipeline is fully automated using AWS Glue Workflows.  
-Jobs are triggered in sequence: Bronze → Silver → Gold, with dependencies and trigger logic.
-
-This visual confirms the execution of the full medallion pipeline:
+The full medallion pipeline is automated using **AWS Glue Workflows**, with Bronze → Silver → Gold dependencies orchestrated end to end.
 
 ![ETL Workflow Completed](screenshots/etl_orchestration_glue_workflow_medallion_layers.png)
 
-> Workflow status: Completed – All stages ran successfully end-to-end.
+> All stages completed successfully in sequence.
 
 * * * * *
 
-Technologies Used
---------------------
+Layer Design
+------------
 
-| Layer | Tech Stack |
+### Bronze
+
+The Bronze layer ingests raw clickstream JSON from S3 and writes enriched Parquet output.
+
+Key behaviors:
+
+-   incremental ingestion via `updated_at` watermark
+-   deterministic `pk` generation using SHA2 hashing
+-   CDC-style columns: `pk`, `op`, `updated_at`, `run_id`
+-   append-only Bronze output for rerun safety
+
+### Silver
+
+The Silver layer resolves the active current-state dataset.
+
+Key behaviors:
+
+-   latest-wins logic using `ROW_NUMBER()`
+-   delete handling with `op = 'D'`
+-   null filtering on critical fields
+-   partitioning by `event_type` and `event_date`
+-   late-arriving event support using `updated_at`
+
+### Gold
+
+The Gold layer produces user-level features for downstream analytics and ML.
+
+Example outputs:
+
+-   `click_count`
+-   `purchase_count`
+-   `last_event_timestamp`
+-   `last_event_type`
+-   `days_since_last_event`
+
+It also writes a lightweight audit log with row counts, run metadata, and freshness signals.
+
+* * * * *
+
+CDC Contract
+------------
+
+A major goal of this project was to simulate **incremental + CDC-style behavior** in a Glue/S3/Parquet environment.
+
+| Column | Purpose |
 | --- | --- |
-| Cloud | AWS |
-| Processing | AWS Glue (PySpark, Spark 3.5, Glue 5.0) |
-| Storage | Amazon S3 (Parquet format) |
-| Metadata | AWS Glue Crawlers + Glue Catalog |
-| Querying | Amazon Athena |
+| `pk` | Deterministic primary key for latest-wins resolution |
+| `op` | Change type: insert, update, delete |
+| `updated_at` | Ordering column for resolving current state |
+| `run_id` | Audit/debugging identifier for the producing job |
 
+This design allows downstream layers to support:
 
-* * * * *
-
-
-📂 Project Structure
---------------------
-
-```
-Project Structure
-├── glue_jobs/
-│   ├── bronze_job_parquet.py
-│   ├── silver_job_parquet.py
-│   ├── dq_checks.py
-│   └── gold_user_features.py
-├── queries/
-│   └── athena_sample_query.sql
-├── sample_data/
-│   ├── event.json
-│   └── event_2.json
-├── reports/
-│   └── dq_report.json
-├── screenshots/
-│   ├── glue_bronze_job_success.png
-│   ├── glue_silver_job_success.png
-│   ├── crawler_bronze_complete.png
-│   ├── crawler_silver_complete.png
-│   ├── s3_bronze_output.png
-│   ├── s3_silver_output.png
-│   ├── athena_bronze_query.png
-│   ├── athena_silver_query.png
-│   ├── glue_gold_job_success.png
-│   ├── s3_gold_output.png
-│   ├── athena_gold_query.png
-│   └── dq_report_preview.png          
-└── README.md
-
-
-```
+-   incremental processing
+-   safe reruns
+-   late-arriving updates
+-   delete/tombstone handling
+-   partition-based "merge-like" behavior without Delta Lake
 
 * * * * *
-
-
 
 Screenshots
----------------
+-----------
 
-### Bronze Job Success (Glue ETL)
+### Bronze Job Success
 
 ![Glue Job Success Screenshot](screenshots/glue_job_success.png)
 
-This screenshot shows the successful execution of the bronze-etl-incremental Glue job, which loads only new raw events from S3 using event_timestamp as a watermark, enriches them with metadata and hashes, and appends them to the Bronze layer in compressed Parquet format.
+Bronze runs incrementally, enriches raw events with metadata and hashes, and writes compressed Parquet output to S3. This job completed successfully on AWS Glue 5.0.
 
-The pipeline includes:
-
-- Incremental load filtering
-
-- AI metadata enrichment (model_input_flag, feature_hash, inference_ts)
-
-- Efficient append strategy (no overwrite)
-
-Resulting files are queryable from Athena and partitioned for downstream performance. 
-
-It confirms the job ran with **2 DPUs** on **AWS Glue 5.0** and completed in **under 2 minutes**.
-
-### Glue Data Catalog: Registered Bronze Table
-
-![Glue Data Catalog Screenshot](screenshots/glue_catalog_bronze_table.png)
-
-Shows the successfully registered `bronze_user_events_parquet` table in the `ai_lakehouse_db` database.  
-
-This table references the Parquet files written by the AWS Glue job and is now **queryable in Athena** for downstream AI analytics.
-
-
-### Bronze Layer Output (Parquet Format)
-
-![S3 Bronze Output](screenshots/s3_bronze_parquet_output.png)
-
-This screenshot shows enriched event data successfully written by the Glue ETL job to the  
-`s3://ai-lakehouse-project/bronze/user_events_parquet/` S3 folder in partitioned **Parquet format**. 
-
-Output from the incremental Bronze ETL job. Each file represents new enriched JSON converted to Parquet.
-
-The naming format (part-00000...snappy.parquet) confirms Spark-optimized compression.
-
-Timestamps confirm the files are fresh and reflect schema-enriched, AI-ready ingestion,  
-suitable for downstream querying via **Athena** or **Redshift Spectrum**.
-
-### Silver Layer ETL Job Success
-
-![Glue Silver Job Success](screenshots/glue_silver_job_success.png)
-
-This screenshot shows the successful execution of the `silver_job_parquet.py` AWS Glue job,  
-which reads enriched Bronze-layer Parquet data and writes a **validated, deduplicated, partitioned** Silver-layer dataset.
-
-The job ran on **2 DPUs using AWS Glue 5.0**, completed in under 2 minutes, and wrote to:  
-`s3://ai-lakehouse-project/silver/user_events/`
-
-This Silver ETL layer prepares data for **fast, partition-aware Athena queries**,  
-as well as **AI model training pipelines** and downstream **feature engineering workflows**.
-
-### Silver Layer Output (Partitioned Parquet Format)
+### Silver Output in S3
 
 ![S3 Silver Output](screenshots/s3_silver_output.png)
 
-This screenshot shows validated and deduplicated Silver-layer data written to  
-`s3://ai-lakehouse-project/silver/user_events/` by the `silver_etl_cdc` Glue job.  
-
-The output is organized using a **two-level partitioning scheme**:  
-- `event_type` (e.g., `click`, `purchase`)  
-- `event_date` (extracted from timestamp)
-
-This structure improves **Athena query performance**, lowers **scan costs**,  
-and sets the foundation for scalable **feature engineering** or **ML ingestion workflows**.
-
-
-
-## Gold Layer Output & Validation
-
-### Gold ETL Job Success
-
-![Glue Gold Job](screenshots/glue_gold_job_success.png)
-
-This screenshot shows the successful execution of the `gold_etl_features` AWS Glue job.
-
-This final ETL step aggregates deduplicated Silver-layer data into **user-level AI features**, including:
-- `click_count`, `purchase_count`
-- `last_event_timestamp`, `last_event_type`
-- `days_since_last_event`
-
-Job ran using **2 DPUs**, completed in **~1 minute**, and wrote to:
-
-`s3://ai-lakehouse-project/gold/user_features/`
-
-Output is **partitioned by training_date** and is queryable from **Amazon Athena** for fast, ML-ready exploration.
-
-### Gold Audit Logging
-
-The Gold ETL job now also writes a lightweight audit record to:
-
-`s3://ai-lakehouse-project/audit/gold_runs/`
-
-Each run captures:
-
-- `run_id`
-- `job_name`
-- `rows_in`
-- `rows_out`
-- `run_timestamp`
-- `status`
-
-This provides a simple execution trail for validating Gold-layer runs and monitoring output volume over time.
-
-### Data Freshness Monitoring
-
-The Gold pipeline also records a simple data freshness signal during each run.
-
-The job calculates the most recent `event_timestamp` observed in the Silver layer and records it in the audit log along with a derived freshness metric.
-
-Audit fields added:
-
-- `max_event_timestamp`
-- `freshness_days`
-
-This makes it easy to detect situations where upstream data ingestion may have stalled or delayed events are arriving later than expected.
-
-### Audit Output Example
-
-![Gold Audit Runs](screenshots/s3_gold_audit_runs.png)
-
-Each Gold pipeline run writes a small JSON record with run metadata and row counts, providing a lightweight execution log for monitoring pipeline health.
+Silver writes validated, deduplicated, partitioned Parquet data organized by `event_type` and `event_date`, improving Athena query performance and reducing scan cost.
 
 ### Gold Output in S3
 
 ![S3 Gold Output](screenshots/s3_gold_output.png)
 
-This screenshot confirms the partitioned Gold-layer output in S3,  
-showing feature-enriched user records written in **Parquet format**, partitioned by `training_date`.
+Gold produces user-level features in partitioned Parquet format for downstream analytics, feature engineering, and ML-ready consumption.
 
-These features are optimized for downstream:
-- ML training pipelines
-- SageMaker ingestion
-- Athena-based analytics
+### Athena Query on Gold
 
----
+![Athena Gold Query](screenshots/athena_gold_query.png)
 
-### Athena Query Success: Bronze Layer Output
+The Gold layer is queryable from Athena with low scan volume and sub-second performance, demonstrating cost-efficient exploration.
 
-![Athena Query Result](screenshots/athena_query_parquet_success1.png)
-
-
-This Athena query validates that the `bronze_user_events_parquet` table is registered and queryable.  
-It filters for records marked as `model_input_flag = true` and selects AI-relevant fields such as  
-`user_id`, `event_type`, and `feature_hash`.
-
-The query succeeded in under 2 seconds, demonstrating low-latency access to enriched event data  
-in Parquet format — optimized for downstream **AI analytics** and **feature engineering**.
-
-
-### Athena Query: Silver Layer (Partitioned Read)
-
-![Athena Silver Query](screenshots/athena_silver_query1.png)
-
-This screenshot shows a successful Athena query against the `silver_user_events` table.  
-The query filters by partition columns `event_type` and `event_date`, demonstrating optimized access to Parquet data.
-
-Query returned a record with:
-- `user_id = u001`
-- `event_type = click`
-- `event_timestamp = 2025-06-17T14:05:00Z`
-
-With **run time under 1 second** and **only 0.18 KB scanned**, this confirms that the Silver layer is:
-- Queryable
-- Partitioned effectively
-- Ready for analytics and ML pipelines
-
-### Athena Query – Gold Layer
-
-![Athena Gold Query](screenshots/athena_gold_query.png)  
-This Athena query shows:
-
-- User-level aggregation from the Gold table
-- Click and purchase counts
-- Min/max timestamps per user
-
-The query succeeded with sub-second latency — demonstrating partition efficiency and production readiness.
-
-
-* * * * *
-
-Layers Summary
------------------
-
-### 🥉 Bronze Layer
-
--   Enriches raw JSON data  
--   Writes to: `s3://ai-lakehouse-project/bronze/user_events_parquet/`  
--   Registered via crawler  
--   Queryable in Athena  
-
-### Bronze Layer Upgrade Summary
-
-The new `bronze_job_parquet.py` job includes:
-- Incremental data filtering using `updated_at` watermark (CDC-aware ordering)
-- Metadata enrichment for AI/ML compatibility
-- SHA2 hashing of events for unique identification
-- Efficient append-only write mode (no reprocessing)
-- Parquet output suitable for Athena + ML pipelines
-
-### CDC Data Contract (Bronze)
-
-Bronze follows a simple CDC-style shape so we can run incrementally, rerun safely, and let downstream layers do “merge-like” behavior using Parquet + partition overwrite.
-
-### CDC columns added in Bronze
-
-| Column        | Type      | What it’s for |
-|--------------|-----------|---------------|
-| `pk`         | string    | Stable primary key for the record (deterministic across reruns / late arrivals). |
-| `op`         | string    | Change type: `I` (insert), `U` (update), `D` (delete / tombstone). |
-| `updated_at` | timestamp | When the source says the record was last updated (used for “latest wins”). |
-| `run_id`     | string    | Identifier for the Glue run that produced the row (audit + debugging). |
-
-### How `pk` is generated
-
-Clickstream events don’t come with a guaranteed event_id, so this project derives one:
-
-`pk = sha2(concat_ws('||', user_id, event_type, event_timestamp, <optional stable fields>), 256)`
-
-The key point is that `pk` is **deterministic**: the same event produces the same key every time.  
-
-### `op` values (CDC semantics)
-
-We use the usual CDC operation codes:
-
-- `I` — new record
-- `U` — updated record for the same `pk`
-- `D` — delete / tombstone for the same `pk` (downstream treats it as removed)
-
-If `op` isn’t present in raw input, Bronze defaults to `I`.
-
-### How `updated_at` is chosen
-
-Ordering matters for CDC, so Bronze always populates `updated_at`:
-
-1. use raw `updated_at` if provided  
-2. else fall back to `event_timestamp` (parsed from `timestamp`)  
-3. else fall back to `ingestion_ts`
-
-Downstream layers use `updated_at` for “latest-wins” resolution.
-
----
-
-### 🥈 Silver Layer
-
--   Resolves multiple versions of the same record using `pk` and `updated_at`
--   Filters out nulls on critical fields  
--   Partitioned by `event_type`, `event_date`  
--   Writes to: `s3://ai-lakehouse-project/silver/user_events/`  
--   Registered via crawler  
--   Validated via Athena (low-latency, partition-filtered query)  
-
-### Silver Layer Upgrade Summary
-
-The `silver_job_parquet.py` job includes:
-- CDC resolution using primary key (`pk`) and `updated_at`
-- Latest-wins logic implemented with a window function
-- Delete handling (`op = 'D'`) to remove inactive records from the active Silver dataset
-- Null filtering on critical fields (`user_id`, `event_type`)
-- Event timestamp normalization and date extraction
-- Partition overwrite behavior to simulate CDC-style merge behavior
-- Optimized Parquet output for analytics and ML
-
-### Handling Late Arriving Events
-
-Clickstream data often arrives out of order.
-
-This pipeline handles late-arriving updates using the `updated_at` timestamp introduced in the Bronze CDC contract.
-
-In the Silver layer, multiple versions of the same record are resolved using a window function:
-
-- records are grouped by primary key (`pk`)
-- ordered by `updated_at` descending
-- the most recent version (`row_number = 1`) is kept
-
-This means that if a late update arrives for an existing record, it can still replace the previous version during the next pipeline run.
-
-In practice, this allows the pipeline to process out-of-order events while maintaining the correct current state in the Silver layer.
-
----
-
-### 🥇 Gold Layer
-
-- Aggregates user-level features for analytics  
-- Output includes click/purchase counts and time-based rollups  
-- Partitioned and optimized for fast querying  
-- Writes to: `s3://ai-lakehouse-project/gold/user_features/`  
-- Registered via crawler  
-- Validated via Athena (scanned records <1KB, sub-second query)
-
-### Gold Layer Upgrade Summary
-
-The `gold_user_features.py` job includes:
-- Aggregation of click and purchase counts
-- Extraction of most recent event type and timestamp
-- Calculation of `days_since_last_event`
-- Addition of `training_date` column for reproducible ML snapshots
-- Partitioned Parquet output with Glue Catalog registration
-
-### Scaling the Pipeline
-
-This pipeline is designed to scale with increasing data volume using partitioned storage, incremental processing, and distributed Spark execution.
-
-Key design choices:
-
-- **Partitioned Parquet storage**  
-  Data is partitioned by `event_date` (Bronze/Silver) and `training_date` (Gold), enabling efficient reads and reducing query scan size in Athena.
-
-- **Incremental processing**  
-  Bronze ingestion uses `updated_at` as a watermark, allowing the pipeline to process only new or updated records instead of full reloads.
-
-- **Latest-wins CDC resolution**  
-  Silver resolves multiple versions of the same record using `pk` and `updated_at`, avoiding expensive full-table merges.
-
-- **Partition overwrite strategy**  
-  The pipeline rewrites only affected partitions instead of entire datasets, keeping writes efficient at scale.
-
-- **Columnar storage (Parquet)**  
-  Using Parquet reduces storage size and improves query performance through column pruning and compression.
-
-These patterns allow the pipeline to handle growing data volumes while maintaining performance and cost efficiency.
-
-### Querying the Gold Layer in Athena
-
-This Athena query demonstrates the AI-ready output of the ETL pipeline.  
-You can see user-level features such as click/purchase counts, timestamps, and feature hashes — all produced by the `gold_etl_features` Glue job.
-
-![Gold Layer Query in Athena](screenshots/athena_gold_medallion_workflow_query.png)
-
-> ⚡ Fast and cost-effective — only 0.32KB scanned in under 500ms.
-
-* * * * *
-
-## Data Quality Layer
-
-A new job `dq_checks_silver_layer` was added to validate Silver-layer integrity and readiness for downstream ML and analytics.
-
-### Job Highlights
-- Run on **AWS Glue 5.0** using PySpark (**2 DPUs**, G.1X)
-- Scanned all records from:  
-  `s3://ai-lakehouse-project/silver/user_events/`
-- Executed in: **1 min 51 sec**
-- Validated key columns for:
-  - Null values
-  - Duplicate detection (`user_id + event_timestamp`)
-  - Cardinality / uniqueness
-
-### Outputs
-- Summary report (JSON): `s3://ai-lakehouse-project/reports/dq_report.json`
-- Markdown version: [reports/dq_report.md](reports/dq_report.md)
-
-  ---
-
-### Findings
--  0 nulls in `user_id`, `event_type`, `feature_hash`
--  0 duplicates
--  100% schema match with expected structure
-
-### Glue Job Screenshot
+### Data Quality Job
 
 ![DQ Glue Job Success](screenshots/glue_dq_job_success.png)
 
+A dedicated Glue job validates Silver-layer integrity, including null checks, duplicate detection, and schema validation before downstream use.
 
 * * * * *
 
-## 📊 QuickSight Dashboard (Gold Layer)
+Data Quality, Audit Logging, and Freshness
+------------------------------------------
 
-An interactive dashboard was built using **Amazon QuickSight** on top of the `gold_user_features` table queried via **Athena**. This showcases the business value of the enriched data model and highlights user behavior patterns.
+The pipeline includes a dedicated **data quality layer** plus lightweight runtime observability.
 
-### Dashboard Highlights
+### Data quality checks
 
-1. **Click vs Purchase Count by User**
-   - Chart: Clustered bar chart
-   - Shows how many events of each type are associated with each user
-   - Ideal for behavior segmentation or funnel analysis
+-   null validation on critical columns
+-   duplicate detection
+-   schema match validation
 
+### Gold audit logging
 
-   <img src="screenshots/quicksight_click_purchase_bar.png" alt="Click vs Purchase Bar Chart" width="70%"/>
+Each Gold run records:
 
+-   `run_id`
+-   `job_name`
+-   `rows_in`
+-   `rows_out`
+-   `run_timestamp`
+-   `status`
 
+### Freshness monitoring
 
-2. **Last Event Snapshot**
-   - Chart: Table
-   - Shows each user's most recent event type and timestamp
-   - Useful for recency modeling or engagement freshness
+Gold also captures:
 
-   ![last event table](screenshots/quicksight_last_event_table.png)
+-   `max_event_timestamp`
+-   `freshness_days`
 
-3. **User Recency Distribution**
-   - Chart: Histogram
-   - Metric: `days_since_last_event` (calculated in Glue)
-   - Shows how recently users interacted with the system
-
-   ![days since last event](screenshots/quicksight_recency_histogram.png)
-
-
-### 📈 Dashboard Value
-
-- Enables **business-friendly exploration** of data without needing SQL or code
-- Demonstrates how AI/ML features (like click_count, recency) can support personalization
-- Adds final polish — turning your project into a **production-ready, end-to-end pipeline**
+This makes it easier to detect stale upstream ingestion or delayed arrivals.
 
 * * * * *
 
+QuickSight Dashboard
+--------------------
 
-## 🕷️ Crawler Registration & Glue Catalog Integration
+The Gold layer is exposed through **Amazon QuickSight** for business-friendly exploration.
 
-To make each data layer (Bronze, Silver, Gold) queryable in Athena, AWS Glue Crawlers are used to register their respective S3 locations. Crawlers automatically detect schema and update the **Glue Data Catalog**, enabling SQL-based exploration with Athena or Redshift Spectrum.
+Dashboard examples include:
 
-### Crawler Dashboard Overview
+-   click vs purchase counts by user
+-   most recent event snapshot
+-   recency distribution using `days_since_last_event`
 
-![Crawler Summary](screenshots/glue_crawlers_summary.png)  
-All crawlers registered and ran successfully:
+![Click vs Purchase Bar Chart](screenshots/quicksight_click_purchase_bar.png)
 
-- `crawler_bronze_user_events`
-- `crawler_silver_user_events`
-- `crawler_gold_user_features`
+This QuickSight view shows user-level behavior patterns derived from the Gold feature layer.
 
-**Completed all 3 crawler registrations (Bronze, Silver, Gold) with table sync confirmed in AWS Glue Catalog.**
-
-
-
-### Crawler Setup Summary
-
-| Layer   | Crawler Name                  | Target S3 Path                                                   | Table Name                      | Database           |
-|---------|-------------------------------|-------------------------------------------------------------------|----------------------------------|--------------------|
-| Bronze  | `crawler_bronze_user_events`  | `s3://ai-lakehouse-project/bronze/user_events_parquet/`          | `bronze_user_events_parquet`    | `ai_lakehouse_db`  |
-| Silver  | `crawler_silver_user_events`  | `s3://ai-lakehouse-project/silver/user_events/`                  | `silver_user_events`            | `ai_lakehouse_db`  |
-| Gold    | `crawler_gold_user_features`  | `s3://ai-lakehouse-project/gold/user_features/`                  | `gold_user_features`            | `ai_lakehouse_db`  |
-
-### How to Configure a Crawler
-
-1. Open **AWS Glue → Crawlers → Add Crawler**
-2. Select **S3** as the source and input the appropriate path
-3. Choose an IAM role (e.g., `AWSGlueServiceRole_ai_lakehouse`)
-4. Set the **target database** to `ai_lakehouse_db`
-5. Optionally use a **table prefix** (`bronze_`, `silver_`, `gold_`)
-6. Run the crawler to scan the data and create or update the table
-
-Once created, these crawlers keep your Athena metadata **fresh and aligned** with the outputs of your Glue jobs.
-
+This adds a useful consumption layer on top of the engineered dataset and demonstrates how the pipeline supports both analytics and ML-oriented workflows.
 
 * * * * *
 
-Sample Athena Query
-----------------------
+Engineering Tradeoff: Delta Lake in AWS Glue
+--------------------------------------------
 
-### 🔹 Bronze Layer Query
+One of the more valuable lessons in this project was a platform tradeoff.
 
-```
-SELECT
-  user_id,
-  event_type,
-  ingestion_ts,
-  model_input_flag,
-  inference_ts,
-  feature_hash
-FROM ai_lakehouse_db.bronze_user_events_parquet
-WHERE model_input_flag = true
-LIMIT 10;
-```
-- Filters for ML-ready records with model_input_flag = true
-- Queries raw enriched data before deduplication or partitioning
+I initially attempted to use **Delta Lake** for the Bronze layer in AWS Glue, including Glue job parameters for Delta configuration. In practice, this led to repeated path-resolution issues and unreliable behavior in Glue.
 
-### 🔹 Silver Layer Query (Partition-Aware)
+### What I changed
 
-```
+Instead of forcing Delta support in Glue, I made a pragmatic pivot:
+
+-   switched to **Parquet**, which Glue supports natively
+-   preserved schema traceability through **Glue Crawlers + Glue Catalog**
+-   kept the pipeline queryable in **Athena**
+-   retained incremental + CDC-style behavior through pipeline design rather than storage format alone
+
+### Why this matters
+
+This was an engineering decision, not just a tooling workaround:
+
+-   it reduced platform friction
+-   preserved delivery speed
+-   maintained scalable, partitioned lakehouse outputs
+-   kept the project aligned to the actual business goal
+
+That tradeoff is part of what makes the project feel production-minded.
+
+* * * * *
+
+Example Query
+-------------
+
+```sql
 SELECT *
 FROM ai_lakehouse_db.silver_user_events
 WHERE event_type = 'click'
   AND event_date = DATE '2025-06-17';
-  ```
-
-- Partition-filtered query for high performance
-- Demonstrates Silver layer’s readiness for analytics or model ingestion
-- Scans minimal data (0.18 KB) in Athena with sub-second response time
-
-* * * * *
-### Challenge: Delta Lake Compatibility in AWS Glue
-
-One of the most frustrating roadblocks I faced was trying to use **Delta Lake** as the storage format in AWS Glue for the Bronze layer.
-
-Despite following official guidance --- including setting Glue job parameters like:
-
-```
---additional-python-modules delta-spark==<version>\
---conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension\
---conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog
 ```
 
-I consistently ran into cryptic path resolution errors, such as:
-
-`IllegalArgumentException: Can not create a Path from an empty  string  `
-
-### How I Resolved It
-
-After testing multiple variations --- including:
-
--   Upgrading Glue version (4.0 → 5.0)
-
--   Adjusting Spark and Delta configurations
-
--   Trying both interactive and job modes
-
-I concluded that **Delta Lake support in Glue is not fully production-ready** without extensive custom setup (e.g., bootstrap scripts, additional JARs).
-
-So instead, I made a **pragmatic pivot**:
-
--   Switched to **Parquet**, which is natively supported in AWS Glue
-
--   Preserved schema evolution via Glue Catalog
-
--   Ensured **Athena queryability** remained intact
+This partition-aware query demonstrates that the Silver layer is optimized for Athena-based analytics.
 
 * * * * *
 
-### Outcome
+What This Project Demonstrates
+--------------------------
 
-Choosing Parquet over Delta allowed me to:
+This pipeline goes beyond a basic ETL demo by showing several real-world engineering patterns:
 
--   Keep momentum on pipeline development
-
--   Maintain a performant, partitioned data lake
-
--   Preserve schema traceability via crawlers + Glue Catalog
+-   **Incremental Bronze ingestion** using `updated_at` watermarking
+-   **CDC-style contract** with deterministic primary keys, operation codes, and latest-wins ordering
+-   **Delete handling and late-arriving event support** in the Silver layer
+-   **Partitioned Parquet outputs** optimized for Athena performance and scan cost reduction
+-   **Gold-layer feature generation** for analytics and ML-ready consumption
+-   **Data quality checks, audit logging, and freshness monitoring**
+-   **Pragmatic platform tradeoffs**, including choosing Parquet over Delta in AWS Glue due to compatibility limitations
 
 * * * * *
 
 Contact
-----------
+-------
 
-For collaboration or questions, feel free to connect via GitHub Discussions or Issues.
+For questions or collaboration, feel free to connect via GitHub Issues or Discussions.
