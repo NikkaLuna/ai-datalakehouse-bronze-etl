@@ -20,7 +20,9 @@ This project implements an **AWS Glue-based medallion ETL pipeline** that proces
 ![Athena](https://img.shields.io/badge/Athena-SQL-blue)
 ![Data Catalog](https://img.shields.io/badge/Glue%20Catalog-Metadata-yellow)
 
-It is designed to demonstrate production-minded data engineering patterns using **AWS Glue, S3, Athena, and PySpark**.
+It is designed to demonstrate production oriented data engineering patterns using **AWS Glue, S3, Athena, and PySpark**.
+
+I built this project to practice the kinds of tradeoffs that show up in lakehouse-style ETL systems: incremental processing, schema handling, partition strategy, and keeping downstream data reliable enough to use.
 
 
 Live Project
@@ -76,6 +78,8 @@ Core Stack
 
 Workflow Orchestration
 ----------------------
+
+One of the main goals here was not just to move data across layers, but to make the pipeline easier to rerun, validate, and reason about once multiple stages were involved.
 
 The full medallion pipeline is automated using **AWS Glue Workflows**, with Bronze → Silver → Gold dependencies orchestrated end to end.
 
@@ -187,6 +191,8 @@ A dedicated Glue job validates Silver-layer integrity, including null checks, du
 Data Quality, Audit Logging, and Freshness
 ------------------------------------------
 
+I wanted this project to go beyond a simple medallion demo by adding the kinds of checks and runtime signals that make pipeline behavior easier to trust.
+
 The pipeline includes a dedicated **data quality layer** plus lightweight runtime observability.
 
 ### Data quality checks
@@ -220,6 +226,8 @@ This makes it easier to detect stale upstream ingestion or delayed arrivals.
 QuickSight Dashboard
 --------------------
 
+I also wanted the project to end with a usable consumption layer, not just storage outputs, so the Gold features could be explored in a more business-facing way.
+
 The Gold layer is exposed through **Amazon QuickSight** for business-friendly exploration.
 
 Dashboard examples include:
@@ -240,6 +248,8 @@ Engineering Tradeoff: Delta Lake in AWS Glue
 --------------------------------------------
 
 One of the more valuable lessons in this project was a platform tradeoff.
+
+This ended up being one of the most useful parts of the project, because it forced me to choose between forcing a tool choice and keeping the pipeline practical, stable, and queryable.
 
 I initially attempted to use **Delta Lake** for the Bronze layer in AWS Glue, including Glue job parameters for Delta configuration. In practice, this led to repeated path-resolution issues and unreliable behavior in Glue.
 
