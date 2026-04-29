@@ -30,7 +30,7 @@ Live Project
 
 This project is also published as a static site with diagrams, screenshots, and a walkthrough:
 
--   [Launch the Website](https://ai-lakehouse.com/index.html)
+-   [Explore the Full Project Website](https://ai-lakehouse.com/index.html)
 
 * * * * *
 
